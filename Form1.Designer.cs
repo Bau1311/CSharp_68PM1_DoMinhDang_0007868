@@ -1,4 +1,4 @@
-﻿namespace WinFormsApp
+namespace WinFormsApp
 {
     partial class Form1
     {
@@ -7,9 +7,7 @@
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
-            {
                 components.Dispose();
-            }
             base.Dispose(disposing);
         }
 
@@ -27,7 +25,6 @@
             label1.ForeColor = Color.White;
             label1.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             label1.Location = new Point(60, 100);
-            label1.Name = "label1";
             label1.Text = "Tên đăng nhập";
 
             // label2 - Mật khẩu
@@ -35,25 +32,23 @@
             label2.ForeColor = Color.White;
             label2.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
             label2.Location = new Point(60, 150);
-            label2.Name = "label2";
             label2.Text = "Mật khẩu";
 
-            // txtUsername
+            // txtUsername - focus đầu tiên
             txtUsername.Location = new Point(220, 97);
-            txtUsername.Name = "txtUsername";
             txtUsername.Size = new Size(250, 28);
             txtUsername.Font = new Font("Segoe UI", 11F);
+            txtUsername.TabIndex = 0;   // ← focus đầu tiên
 
             // txtPassword
             txtPassword.Location = new Point(220, 147);
-            txtPassword.Name = "txtPassword";
             txtPassword.PasswordChar = '*';
             txtPassword.Size = new Size(250, 28);
             txtPassword.Font = new Font("Segoe UI", 11F);
+            txtPassword.TabIndex = 1;   // ← focus thứ hai
 
             // btnLogin
             btnLogin.Location = new Point(170, 210);
-            btnLogin.Name = "btnLogin";
             btnLogin.Size = new Size(200, 45);
             btnLogin.Text = "ĐĂNG NHẬP";
             btnLogin.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
@@ -62,6 +57,7 @@
             btnLogin.FlatStyle = FlatStyle.Flat;
             btnLogin.FlatAppearance.BorderSize = 0;
             btnLogin.Cursor = Cursors.Hand;
+            btnLogin.TabIndex = 2;
             btnLogin.Click += btnLogin_Click;
 
             // Label tiêu đề
