@@ -14,6 +14,7 @@ namespace WinFormsApp
             menuStrip1    = new MenuStrip();
             mnuDashboard  = new ToolStripMenuItem();
             mnuQLSV       = new ToolStripMenuItem();
+            mnuQLLopHoc   = new ToolStripMenuItem();
             mnuDangXuat   = new ToolStripMenuItem();
             pnlContent    = new Panel();
 
@@ -24,7 +25,7 @@ namespace WinFormsApp
             menuStrip1.BackColor = Color.FromArgb(30, 58, 95);
             menuStrip1.ForeColor = Color.White;
             menuStrip1.Font      = new Font("Segoe UI", 11F, FontStyle.Bold);
-            menuStrip1.Items.AddRange(new ToolStripItem[] { mnuDashboard, mnuQLSV, mnuDangXuat });
+            menuStrip1.Items.AddRange(new ToolStripItem[] { mnuDashboard, mnuQLSV, mnuQLLopHoc, mnuDangXuat });
             menuStrip1.Location  = new Point(0, 0);
             menuStrip1.Name      = "menuStrip1";
             menuStrip1.Padding   = new Padding(5, 3, 0, 3);
@@ -36,6 +37,10 @@ namespace WinFormsApp
             mnuQLSV.Text      = "👨‍🎓 Quản lý Sinh Viên";
             mnuQLSV.ForeColor = Color.White;
             mnuQLSV.Click    += mnuQLSV_Click;
+
+            mnuQLLopHoc.Text      = "📚 Quản lý Lớp học";
+            mnuQLLopHoc.ForeColor = Color.White;
+            mnuQLLopHoc.Click    += mnuQLLopHoc_Click;
 
             mnuDangXuat.Text      = "🚪 Đăng xuất";
             mnuDangXuat.ForeColor = Color.FromArgb(255, 100, 100);
@@ -65,7 +70,7 @@ namespace WinFormsApp
         }
 
         private MenuStrip menuStrip1;
-        private ToolStripMenuItem mnuDashboard, mnuQLSV, mnuDangXuat;
+        private ToolStripMenuItem mnuDashboard, mnuQLSV, mnuQLLopHoc, mnuDangXuat;
         private Panel pnlContent;
     }
 }

@@ -44,5 +44,10 @@ namespace WinFormsApp
             uc.Dock = DockStyle.Fill;
             pnlContent.Controls.Add(uc);
         }
+
+        private void mnuQLLopHoc_Click(object sender, EventArgs e)
+        {
+            HienThiUC(new UCQLLopHoc());
+        }
     }
 }
