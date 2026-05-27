@@ -1,28 +1,34 @@
-﻿namespace WinFormsApp
+namespace WinFormsApp
 {
     public partial class UCQLLopHoc : UserControl
     {
         // ── Dữ liệu ────────────────────────────────────────────────────────
-        private List<LopHoc> danhSachLop = new List<LopHoc>();
+        private readonly QLSinhVienDB db = new QLSinhVienDB();
         private List<LopHoc> ketQuaTimKiem = new List<LopHoc>();
         private int currentPage = 1;
         private const int pageSize = 10;
-        private int nextId = 1;   // auto-increment
 
         public UCQLLopHoc()
         {
             InitializeComponent();
-            KhoiTaoDuLieu();
             TaoCotDataGridView();
-            HienThiDanhSach();
+            LoadDanhSachLop();
         }
 
-        // ── Khởi tạo dữ liệu mẫu ──────────────────────────────────────────
-        private void KhoiTaoDuLieu()
+        // ── Load danh sách lớp từ DB ────────────────────────────────────────
+        private void LoadDanhSachLop()
         {
-            danhSachLop.Add(new LopHoc { MaID = nextId++, MaLop = "68PM1", TenLop = "Lớp 68PM1", GhiChu = "abc" });
-            danhSachLop.Add(new LopHoc { MaID = nextId++, MaLop = "68PM2", TenLop = "Lớp 68PM2", GhiChu = "xyz" });
-            ketQuaTimKiem = new List<LopHoc>(danhSachLop);
+            try
+            {
+                ketQuaTimKiem = db.LayDanhSachLop();
+                currentPage = 1;
+                HienThiDanhSach();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi kết nối CSDL:\n{ex.Message}",
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         // ── Tạo cột DataGridView ───────────────────────────────────────────
@@ -35,10 +41,10 @@
             dgvLopHoc.Columns.Add("GhiChu", "Ghi chú");
 
             // Căn chỉnh độ rộng cột
-            dgvLopHoc.Columns["MaID"].Width = 70;
-            dgvLopHoc.Columns["MaLop"].Width = 120;
-            dgvLopHoc.Columns["TenLop"].Width = 250;
-            dgvLopHoc.Columns["GhiChu"].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            dgvLopHoc.Columns["MaID"]!.Width = 70;
+            dgvLopHoc.Columns["MaLop"]!.Width = 120;
+            dgvLopHoc.Columns["TenLop"]!.Width = 250;
+            dgvLopHoc.Columns["GhiChu"]!.AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
         }
 
         // ── Hiển thị danh sách (có phân trang) ────────────────────────────
@@ -82,13 +88,13 @@
             return true;
         }
 
-        // ── THÊM ───────────────────────────────────────────────────────────
+        // ── THÊM → DB ─────────────────────────────────────────────────────
         private void btnThem_Click(object sender, EventArgs e)
         {
             if (!KiemTraDuLieu()) return;
 
             // Kiểm tra trùng mã lớp
-            if (danhSachLop.Any(l => l.MaLop.Equals(txtMaLop.Text.Trim(), StringComparison.OrdinalIgnoreCase)))
+            if (db.TonTaiMaLop(txtMaLop.Text.Trim()))
             {
                 MessageBox.Show("Mã lớp đã tồn tại!", "Thông báo",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -97,22 +103,31 @@
 
             var lop = new LopHoc
             {
-                MaID = nextId++,
-                MaLop = txtMaLop.Text.Trim(),
+                MaLop  = txtMaLop.Text.Trim(),
                 TenLop = txtTenLop.Text.Trim(),
                 GhiChu = txtGhiChu.Text.Trim()
             };
 
-            danhSachLop.Add(lop);
-            ketQuaTimKiem = new List<LopHoc>(danhSachLop);
-            currentPage = (int)Math.Ceiling((double)ketQuaTimKiem.Count / pageSize);
-            HienThiDanhSach();
-            LamMoi();
-            MessageBox.Show("Thêm lớp học thành công!", "Thông báo",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            try
+            {
+                db.ThemLopHoc(lop);
+                LoadDanhSachLop();
+                // Nhảy tới trang cuối để thấy bản ghi mới
+                int totalPages = (int)Math.Ceiling((double)ketQuaTimKiem.Count / pageSize);
+                currentPage = totalPages;
+                HienThiDanhSach();
+                LamMoi();
+                MessageBox.Show("Thêm lớp học thành công!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi thêm lớp:\n{ex.Message}",
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
-        // ── SỬA ────────────────────────────────────────────────────────────
+        // ── SỬA → DB ──────────────────────────────────────────────────────
         private void btnSua_Click(object sender, EventArgs e)
         {
             if (dgvLopHoc.SelectedRows.Count == 0)
@@ -124,31 +139,38 @@
             if (!KiemTraDuLieu()) return;
 
             int maID = Convert.ToInt32(dgvLopHoc.SelectedRows[0].Cells["MaID"].Value);
-            var lop = danhSachLop.FirstOrDefault(l => l.MaID == maID);
-            if (lop == null) return;
 
             // Kiểm tra trùng mã lớp với bản ghi khác
-            bool trung = danhSachLop.Any(l =>
-                l.MaID != maID &&
-                l.MaLop.Equals(txtMaLop.Text.Trim(), StringComparison.OrdinalIgnoreCase));
-            if (trung)
+            if (db.TonTaiMaLop(txtMaLop.Text.Trim(), maID))
             {
                 MessageBox.Show("Mã lớp đã tồn tại!", "Thông báo",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
-            lop.MaLop = txtMaLop.Text.Trim();
-            lop.TenLop = txtTenLop.Text.Trim();
-            lop.GhiChu = txtGhiChu.Text.Trim();
+            var lop = new LopHoc
+            {
+                MaID   = maID,
+                MaLop  = txtMaLop.Text.Trim(),
+                TenLop = txtTenLop.Text.Trim(),
+                GhiChu = txtGhiChu.Text.Trim()
+            };
 
-            ketQuaTimKiem = new List<LopHoc>(danhSachLop);
-            HienThiDanhSach();
-            MessageBox.Show("Sửa lớp học thành công!", "Thông báo",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            try
+            {
+                db.SuaLopHoc(lop);
+                LoadDanhSachLop();
+                MessageBox.Show("Sửa lớp học thành công!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi sửa lớp:\n{ex.Message}",
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
-        // ── XÓA ────────────────────────────────────────────────────────────
+        // ── XÓA → DB ──────────────────────────────────────────────────────
         private void btnXoa_Click(object sender, EventArgs e)
         {
             if (dgvLopHoc.SelectedRows.Count == 0)
@@ -163,10 +185,17 @@
             if (MessageBox.Show("Bạn có chắc muốn xóa lớp này?", "Xác nhận",
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                danhSachLop.RemoveAll(l => l.MaID == maID);
-                ketQuaTimKiem = new List<LopHoc>(danhSachLop);
-                HienThiDanhSach();
-                LamMoi();
+                try
+                {
+                    db.XoaLopHoc(maID);
+                    LoadDanhSachLop();
+                    LamMoi();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi khi xóa lớp:\n{ex.Message}",
+                        "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
@@ -182,16 +211,24 @@
             dgvLopHoc.ClearSelection();
         }
 
-        // ── TÌM KIẾM ───────────────────────────────────────────────────────
+        // ── TÌM KIẾM → DB ──────────────────────────────────────────────────
         private void btnTim_Click(object sender, EventArgs e)
         {
-            string keyword = txtTimKiem.Text.Trim().ToLower();
-            ketQuaTimKiem = danhSachLop.Where(l =>
-                l.MaID.ToString().Contains(keyword) ||
-                l.MaLop.ToLower().Contains(keyword) ||
-                l.TenLop.ToLower().Contains(keyword)).ToList();
-            currentPage = 1;
-            HienThiDanhSach();
+            string keyword = txtTimKiem.Text.Trim();
+            try
+            {
+                if (string.IsNullOrWhiteSpace(keyword))
+                    ketQuaTimKiem = db.LayDanhSachLop();
+                else
+                    ketQuaTimKiem = db.TimLopHoc(keyword);
+                currentPage = 1;
+                HienThiDanhSach();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi tìm kiếm:\n{ex.Message}",
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         // ── Click vào hàng → đổ dữ liệu vào form ──────────────────────────
@@ -199,10 +236,10 @@
         {
             if (e.RowIndex < 0) return;
             var row = dgvLopHoc.Rows[e.RowIndex];
-            txtMaID.Text = row.Cells["MaID"].Value.ToString();
-            txtMaLop.Text = row.Cells["MaLop"].Value.ToString();
-            txtTenLop.Text = row.Cells["TenLop"].Value.ToString();
-            txtGhiChu.Text = row.Cells["GhiChu"].Value.ToString();
+            txtMaID.Text  = row.Cells["MaID"].Value?.ToString() ?? "";
+            txtMaLop.Text = row.Cells["MaLop"].Value?.ToString() ?? "";
+            txtTenLop.Text = row.Cells["TenLop"].Value?.ToString() ?? "";
+            txtGhiChu.Text = row.Cells["GhiChu"].Value?.ToString() ?? "";
         }
 
         // ── Xem danh sách sinh viên của lớp đang chọn ─────────────────────
@@ -214,13 +251,9 @@
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            string maLop = dgvLopHoc.SelectedRows[0].Cells["MaLop"].Value.ToString();
+            string maLop = dgvLopHoc.SelectedRows[0].Cells["MaLop"].Value?.ToString() ?? "";
             MessageBox.Show($"Xem danh sách sinh viên lớp: {maLop}\n(Tích hợp sau khi có UC quản lý SV)",
                 "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-            // TODO: Khi tích hợp với FormMain, thay bằng:
-            // var parent = this.ParentForm as FormMain;
-            // parent?.HienThiUC(new UCQLSV(maLop));
         }
 
         // ── Phân trang ─────────────────────────────────────────────────────
