@@ -124,14 +124,28 @@ namespace WinFormsApp
             HienThiDanhSach();
         }
 
+        // ── Click vào hàng → đổ dữ liệu vào form ───────────────────────
         private void dgvSinhVien_CellClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex < 0) return;
             var row = dgvSinhVien.Rows[e.RowIndex];
-            txtMaSV.Text            = row.Cells["MaSV"].Value.ToString();
-            txtHoTen.Text           = row.Cells["HoTen"].Value.ToString();
-            cboGioiTinh.SelectedItem = row.Cells["GioiTinh"].Value.ToString();
-            dtpNgaySinh.Value       = DateTime.ParseExact(row.Cells["NgaySinh"].Value.ToString(), "dd/MM/yyyy", null);
+            txtMaSV.Text             = row.Cells["MaSV"].Value?.ToString() ?? "";
+            txtHoTen.Text            = row.Cells["HoTen"].Value?.ToString() ?? "";
+            cboGioiTinh.SelectedItem = row.Cells["GioiTinh"].Value?.ToString();
+            dtpNgaySinh.Value        = DateTime.ParseExact(
+                row.Cells["NgaySinh"].Value?.ToString() ?? DateTime.Now.ToString("dd/MM/yyyy"),
+                "dd/MM/yyyy", null);
+
+            // Tìm lớp tương ứng trong cboLop
+            string maLop = row.Cells["Lop"].Value?.ToString() ?? "";
+            for (int i = 0; i < cboLop.Items.Count; i++)
+            {
+                if ((cboLop.Items[i]?.ToString() ?? "").StartsWith(maLop))
+                {
+                    cboLop.SelectedIndex = i;
+                    break;
+                }
+            }
         }
 
         private void btnDau_Click(object sender, EventArgs e)  { currentPage = 1; HienThiDanhSach(); }
