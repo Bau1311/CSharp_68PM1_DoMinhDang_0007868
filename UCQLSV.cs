@@ -2,6 +2,7 @@ namespace WinFormsApp
 {
     public partial class UCQLSV : UserControl
     {
+        private QLSinhVienDB NewDb() => new QLSinhVienDB();
         private List<SinhVien> danhSachSV = new List<SinhVien>();
         private int currentPage = 1;
         private int pageSize = 10;
@@ -72,20 +73,37 @@ namespace WinFormsApp
             MessageBox.Show("Thêm sinh viên thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
+        // ── SỬA sinh viên → DB ───────────────────────────────────────────
         private void btnSua_Click(object sender, EventArgs e)
         {
-            if (dgvSinhVien.SelectedRows.Count == 0) return;
-            string maSV = dgvSinhVien.SelectedRows[0].Cells["MaSV"].Value.ToString();
-            var sv = danhSachSV.FirstOrDefault(s => s.MaSV == maSV);
-            if (sv != null)
+            if (dgvSinhVien.SelectedRows.Count == 0)
             {
-                sv.HoTen    = txtHoTen.Text.Trim();
-                sv.GioiTinh = cboGioiTinh.SelectedItem.ToString();
-                sv.NgaySinh = dtpNgaySinh.Value;
-                sv.Lop      = cboLop.SelectedItem.ToString().Split('–')[0].Trim();
+                MessageBox.Show("Vui lòng chọn sinh viên cần sửa!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            string maSV = dgvSinhVien.SelectedRows[0].Cells["MaSV"].Value?.ToString() ?? "";
+            var sv = new SinhVien
+            {
+                MaSV     = maSV,
+                HoTen    = txtHoTen.Text.Trim(),
+                GioiTinh = cboGioiTinh.SelectedItem?.ToString() ?? "Nam",
+                NgaySinh = dtpNgaySinh.Value,
+                Lop      = cboLop.SelectedItem?.ToString()?.Split('–')[0].Trim() ?? ""
+            };
+            try
+            {
+                using var db = NewDb();
+                db.SuaSinhVien(sv);
+                danhSachSV = db.LayDanhSachSinhVien();
                 ketQuaTimKiem = new List<SinhVien>(danhSachSV);
                 HienThiDanhSach();
                 MessageBox.Show("Sửa thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi sửa sinh viên:\n{ex.Message}",
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
