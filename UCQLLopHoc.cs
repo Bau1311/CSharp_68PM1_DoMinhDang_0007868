@@ -248,8 +248,31 @@ namespace WinFormsApp
                 return;
             }
             string maLop = dgvLopHoc.SelectedRows[0].Cells["MaLop"].Value?.ToString() ?? "";
-            MessageBox.Show($"Xem danh sách sinh viên lớp: {maLop}\n(Tích hợp sau khi có UC quản lý SV)",
-                "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            try
+            {
+                using var dbCtx = new QLSinhVienDB();
+                var dsSV = dbCtx.SinhViens
+                    .Where(sv => sv.Lop == maLop)
+                    .OrderBy(sv => sv.HoTen)
+                    .ToList();
+
+                if (dsSV.Count == 0)
+                {
+                    MessageBox.Show($"Lớp {maLop} chưa có sinh viên nào.",
+                        "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                string danhSach = string.Join("\n", dsSV.Select(
+                    sv => $"  {sv.MaSV}  –  {sv.HoTen}  ({sv.GioiTinh})"));
+                MessageBox.Show($"Danh sách sinh viên lớp {maLop} ({dsSV.Count} SV):\n\n{danhSach}",
+                    "Danh sách sinh viên", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi tải danh sách SV:\n{ex.Message}",
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         // ── Phân trang ─────────────────────────────────────────────────────
