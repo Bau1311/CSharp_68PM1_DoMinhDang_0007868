@@ -3,27 +3,51 @@ namespace WinFormsApp
     public partial class UCQLSV : UserControl
     {
         private QLSinhVienDB NewDb() => new QLSinhVienDB();
-        private List<SinhVien> danhSachSV = new List<SinhVien>();
+        private List<SinhVien> ketQuaTimKiem = new List<SinhVien>();
         private int currentPage = 1;
         private int pageSize = 10;
-        private List<SinhVien> ketQuaTimKiem = new List<SinhVien>();
 
         public UCQLSV()
         {
             InitializeComponent();
-            KhoiTaoDuLieu();
             TaoCoTDanhSachSV();
-            HienThiDanhSach();
+            LoadDanhSachLopVaoCBX();
+            LoadDanhSachSinhVien();
         }
 
-        private void KhoiTaoDuLieu()
+        private void LoadDanhSachLopVaoCBX()
         {
-            danhSachSV.Add(new SinhVien { MaSV = "1", HoTen = "Nguyễn Văn An",   GioiTinh = "Nam", NgaySinh = new DateTime(2005, 1, 15),  Lop = "68PM1" });
-            danhSachSV.Add(new SinhVien { MaSV = "2", HoTen = "Trần Thị Bích",   GioiTinh = "Nữ",  NgaySinh = new DateTime(2005, 3, 22),  Lop = "68PM1" });
-            danhSachSV.Add(new SinhVien { MaSV = "3", HoTen = "Lê Hoàng Nam",    GioiTinh = "Nam", NgaySinh = new DateTime(2005, 7, 10),  Lop = "68PM2" });
-            danhSachSV.Add(new SinhVien { MaSV = "4", HoTen = "Phạm Thị Lan",    GioiTinh = "Nữ",  NgaySinh = new DateTime(2005, 9, 5),   Lop = "68PM2" });
-            danhSachSV.Add(new SinhVien { MaSV = "5", HoTen = "Võ Minh Tuấn",    GioiTinh = "Nam", NgaySinh = new DateTime(2005, 11, 30), Lop = "68PM1" });
-            ketQuaTimKiem = new List<SinhVien>(danhSachSV);
+            try
+            {
+                using var db = NewDb();
+                var dsLop = db.LayDanhSachLop();
+                cboLop.Items.Clear();
+                foreach (var lop in dsLop)
+                    cboLop.Items.Add($"{lop.MaLop} – {lop.TenLop}");
+                if (cboLop.Items.Count > 0)
+                    cboLop.SelectedIndex = 0;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi kết nối CSDL khi load lớp:\n{ex.Message}",
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LoadDanhSachSinhVien()
+        {
+            try
+            {
+                using var db = NewDb();
+                ketQuaTimKiem = db.LayDanhSachSinhVien();
+                currentPage = 1;
+                HienThiDanhSach();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi kết nối CSDL khi load sinh viên:\n{ex.Message}",
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void TaoCoTDanhSachSV()
@@ -46,7 +70,8 @@ namespace WinFormsApp
 
             var trang = ketQuaTimKiem.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList();
             foreach (var sv in trang)
-                dgvSinhVien.Rows.Add(sv.MaSV, sv.HoTen, sv.GioiTinh, sv.NgaySinh.ToString("dd/MM/yyyy"), sv.Lop);
+                dgvSinhVien.Rows.Add(sv.MaSV, sv.HoTen, sv.GioiTinh,
+                    sv.NgaySinh.ToString("dd/MM/yyyy"), sv.Lop);
 
             lblTrang.Text = $"Trang {currentPage}/{totalPages}  |  {total} bản ghi";
         }
@@ -55,25 +80,34 @@ namespace WinFormsApp
         {
             if (string.IsNullOrWhiteSpace(txtMaSV.Text) || string.IsNullOrWhiteSpace(txtHoTen.Text))
             {
-                MessageBox.Show("Vui lòng nhập đầy đủ thông tin!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Vui lòng nhập đầy đủ thông tin!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             var sv = new SinhVien
             {
                 MaSV     = txtMaSV.Text.Trim(),
                 HoTen    = txtHoTen.Text.Trim(),
-                GioiTinh = cboGioiTinh.SelectedItem.ToString(),
+                GioiTinh = cboGioiTinh.SelectedItem?.ToString() ?? "Nam",
                 NgaySinh = dtpNgaySinh.Value,
-                Lop      = cboLop.SelectedItem.ToString().Split('–')[0].Trim()
+                Lop      = cboLop.SelectedItem?.ToString()?.Split('–')[0].Trim() ?? ""
             };
-            danhSachSV.Add(sv);
-            ketQuaTimKiem = new List<SinhVien>(danhSachSV);
-            HienThiDanhSach();
-            LamMoi();
-            MessageBox.Show("Thêm sinh viên thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            try
+            {
+                using var db = NewDb();
+                db.ThemSinhVien(sv);
+                LoadDanhSachSinhVien();
+                LamMoi();
+                MessageBox.Show("Thêm sinh viên thành công!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi thêm sinh viên:\n{ex.Message}",
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
-        // ── SỬA sinh viên → DB ───────────────────────────────────────────
         private void btnSua_Click(object sender, EventArgs e)
         {
             if (dgvSinhVien.SelectedRows.Count == 0)
@@ -95,10 +129,9 @@ namespace WinFormsApp
             {
                 using var db = NewDb();
                 db.SuaSinhVien(sv);
-                danhSachSV = db.LayDanhSachSinhVien();
-                ketQuaTimKiem = new List<SinhVien>(danhSachSV);
-                HienThiDanhSach();
-                MessageBox.Show("Sửa thành công!", "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                LoadDanhSachSinhVien();
+                MessageBox.Show("Sửa thành công!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
@@ -107,7 +140,6 @@ namespace WinFormsApp
             }
         }
 
-        // ── XÓA sinh viên → DB ───────────────────────────────────────────
         private void btnXoa_Click(object sender, EventArgs e)
         {
             if (dgvSinhVien.SelectedRows.Count == 0)
@@ -124,9 +156,7 @@ namespace WinFormsApp
                 {
                     using var db = NewDb();
                     db.XoaSinhVien(maSV);
-                    danhSachSV = db.LayDanhSachSinhVien();
-                    ketQuaTimKiem = new List<SinhVien>(danhSachSV);
-                    HienThiDanhSach();
+                    LoadDanhSachSinhVien();
                     LamMoi();
                 }
                 catch (Exception ex)
@@ -145,18 +175,29 @@ namespace WinFormsApp
             txtHoTen.Clear();
             dtpNgaySinh.Value = DateTime.Now;
             cboGioiTinh.SelectedIndex = 0;
-            cboLop.SelectedIndex = 0;
+            if (cboLop.Items.Count > 0)
+                cboLop.SelectedIndex = 0;
         }
 
+        // ── TÌM KIẾM → DB ───────────────────────────────────────────────
         private void btnTim_Click(object sender, EventArgs e)
         {
-            string keyword = txtTimKiem.Text.Trim().ToLower();
-            ketQuaTimKiem = danhSachSV.Where(s =>
-                s.HoTen.ToLower().Contains(keyword) ||
-                s.MaSV.ToLower().Contains(keyword)  ||
-                s.Lop.ToLower().Contains(keyword)).ToList();
-            currentPage = 1;
-            HienThiDanhSach();
+            string keyword = txtTimKiem.Text.Trim();
+            try
+            {
+                using var db = NewDb();
+                if (string.IsNullOrWhiteSpace(keyword))
+                    ketQuaTimKiem = db.LayDanhSachSinhVien();
+                else
+                    ketQuaTimKiem = db.TimSinhVien(keyword);
+                currentPage = 1;
+                HienThiDanhSach();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Lỗi khi tìm kiếm:\n{ex.Message}",
+                    "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         // ── Click vào hàng → đổ dữ liệu vào form ───────────────────────
@@ -171,7 +212,6 @@ namespace WinFormsApp
                 row.Cells["NgaySinh"].Value?.ToString() ?? DateTime.Now.ToString("dd/MM/yyyy"),
                 "dd/MM/yyyy", null);
 
-            // Tìm lớp tương ứng trong cboLop
             string maLop = row.Cells["Lop"].Value?.ToString() ?? "";
             for (int i = 0; i < cboLop.Items.Count; i++)
             {
@@ -183,6 +223,7 @@ namespace WinFormsApp
             }
         }
 
+        // ── Phân trang ───────────────────────────────────────────────────
         private void btnDau_Click(object sender, EventArgs e)  { currentPage = 1; HienThiDanhSach(); }
         private void btnTruoc_Click(object sender, EventArgs e) { if (currentPage > 1) { currentPage--; HienThiDanhSach(); } }
         private void btnSau_Click(object sender, EventArgs e)
@@ -193,6 +234,7 @@ namespace WinFormsApp
         private void btnCuoi_Click(object sender, EventArgs e)
         {
             currentPage = (int)Math.Ceiling((double)ketQuaTimKiem.Count / pageSize);
+            if (currentPage < 1) currentPage = 1;
             HienThiDanhSach();
         }
     }
