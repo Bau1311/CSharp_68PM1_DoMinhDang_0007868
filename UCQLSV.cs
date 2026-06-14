@@ -107,16 +107,33 @@ namespace WinFormsApp
             }
         }
 
+        // ── XÓA sinh viên → DB ───────────────────────────────────────────
         private void btnXoa_Click(object sender, EventArgs e)
         {
-            if (dgvSinhVien.SelectedRows.Count == 0) return;
-            string maSV = dgvSinhVien.SelectedRows[0].Cells["MaSV"].Value.ToString();
-            if (MessageBox.Show("Bạn có chắc muốn xóa?", "Xác nhận", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (dgvSinhVien.SelectedRows.Count == 0)
             {
-                danhSachSV.RemoveAll(s => s.MaSV == maSV);
-                ketQuaTimKiem = new List<SinhVien>(danhSachSV);
-                HienThiDanhSach();
-                LamMoi();
+                MessageBox.Show("Vui lòng chọn sinh viên cần xóa!", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            string maSV = dgvSinhVien.SelectedRows[0].Cells["MaSV"].Value?.ToString() ?? "";
+            if (MessageBox.Show("Bạn có chắc muốn xóa?", "Xác nhận",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            {
+                try
+                {
+                    using var db = NewDb();
+                    db.XoaSinhVien(maSV);
+                    danhSachSV = db.LayDanhSachSinhVien();
+                    ketQuaTimKiem = new List<SinhVien>(danhSachSV);
+                    HienThiDanhSach();
+                    LamMoi();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Lỗi khi xóa sinh viên:\n{ex.Message}",
+                        "Lỗi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
